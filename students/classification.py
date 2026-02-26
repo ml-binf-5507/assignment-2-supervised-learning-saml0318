@@ -36,13 +36,17 @@ def train_logistic_regression_grid(X_train, y_train, param_grid=None):
             'penalty': ['l2'],
             'solver': ['lbfgs']
         }
-    
-    # TODO: Implement grid search for logistic regression
-    # - Create LogisticRegression with max_iter=1000
-    # - Use GridSearchCV with cv=5
-    # - Fit on training data
-    # - Return fitted GridSearchCV object
-    pass
+
+    model = LogisticRegression(max_iter=1000, random_state=42)
+    grid_search = GridSearchCV(
+        estimator=model,
+        param_grid=param_grid,
+        cv=5,
+        scoring="roc_auc",
+        n_jobs=-1,
+    )
+    grid_search.fit(X_train, y_train)
+    return grid_search
 
 
 def train_knn_grid(X_train, y_train, param_grid=None):
@@ -72,13 +76,17 @@ def train_knn_grid(X_train, y_train, param_grid=None):
             'weights': ['uniform', 'distance'],
             'metric': ['euclidean', 'manhattan']
         }
-    
-    # TODO: Implement grid search for k-NN
-    # - Create KNeighborsClassifier
-    # - Use GridSearchCV with cv=5
-    # - Fit on training data
-    # - Return fitted GridSearchCV object
-    pass
+
+    model = KNeighborsClassifier()
+    grid_search = GridSearchCV(
+        estimator=model,
+        param_grid=param_grid,
+        cv=5,
+        scoring="roc_auc",
+        n_jobs=-1,
+    )
+    grid_search.fit(X_train, y_train)
+    return grid_search
 
 
 def get_best_logistic_regression(X_train, y_train, X_test, y_test, param_grid=None):
@@ -106,11 +114,18 @@ def get_best_logistic_regression(X_train, y_train, X_test, y_test, param_grid=No
         - 'best_params': best parameters found
         - 'cv_results_df': DataFrame of all CV results
     """
-    # TODO: Implement best model retrieval
-    # - Use train_logistic_regression_grid
-    # - Extract best model
-    # - Return dictionary
-    pass
+    gs = train_logistic_regression_grid(X_train, y_train, param_grid=param_grid)
+    best_model = gs.best_estimator_
+    cv_results_df = pd.DataFrame(gs.cv_results_)
+
+    test_score = best_model.score(X_test, y_test)
+
+    return {
+        "model": best_model,
+        "best_params": gs.best_params_,
+        "cv_results_df": cv_results_df,
+        "test_score": float(test_score),
+    }
 
 
 def get_best_knn(X_train, y_train, X_test, y_test, param_grid=None):
@@ -139,8 +154,17 @@ def get_best_knn(X_train, y_train, X_test, y_test, param_grid=None):
         - 'best_k': best n_neighbors value
         - 'cv_results_df': DataFrame of all CV results
     """
-    # TODO: Implement best model retrieval
-    # - Use train_knn_grid
-    # - Extract best model and best_k
-    # - Return dictionary
-    pass
+    gs = train_knn_grid(X_train, y_train, param_grid=param_grid)
+    best_model = gs.best_estimator_
+    cv_results_df = pd.DataFrame(gs.cv_results_)
+    best_k = gs.best_params_.get("n_neighbors")
+
+    test_score = best_model.score(X_test, y_test)
+
+    return {
+        "model": best_model,
+        "best_params": gs.best_params_,
+        "best_k": int(best_k) if best_k is not None else None,
+        "cv_results_df": cv_results_df,
+        "test_score": float(test_score),
+    }

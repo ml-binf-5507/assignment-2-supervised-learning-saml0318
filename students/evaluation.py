@@ -7,7 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics import (
     roc_curve, auc, precision_recall_curve, average_precision_score,
-    roc_auc_score, auc as compute_auc, r2_score
+    roc_auc_score, r2_score
 )
 
 
@@ -27,9 +27,7 @@ def calculate_r2_score(y_true, y_pred):
     float
         R² score (between -inf and 1, higher is better)
     """
-    # TODO: Implement R² calculation
-    # Use sklearn's r2_score
-    pass
+    return float(r2_score(y_true, y_pred))
 
 
 def calculate_classification_metrics(y_true, y_pred):
@@ -49,10 +47,13 @@ def calculate_classification_metrics(y_true, y_pred):
         Dictionary with keys: 'accuracy', 'precision', 'recall', 'f1'
     """
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-    
-    # TODO: Implement metrics calculation
-    # Return dictionary with all four metrics
-    pass
+
+    return {
+        "accuracy": float(accuracy_score(y_true, y_pred)),
+        "precision": float(precision_score(y_true, y_pred, zero_division=0)),
+        "recall": float(recall_score(y_true, y_pred, zero_division=0)),
+        "f1": float(f1_score(y_true, y_pred, zero_division=0)),
+    }
 
 
 def calculate_auroc_score(y_true, y_pred_proba):
@@ -71,9 +72,7 @@ def calculate_auroc_score(y_true, y_pred_proba):
     float
         AUROC score (between 0 and 1)
     """
-    # TODO: Implement AUROC calculation
-    # Use sklearn's roc_auc_score
-    pass
+    return float(roc_auc_score(y_true, y_pred_proba))
 
 
 def calculate_auprc_score(y_true, y_pred_proba):
@@ -92,9 +91,7 @@ def calculate_auprc_score(y_true, y_pred_proba):
     float
         AUPRC score (between 0 and 1)
     """
-    # TODO: Implement AUPRC calculation
-    # Use sklearn's average_precision_score
-    pass
+    return float(average_precision_score(y_true, y_pred_proba))
 
 
 def generate_auroc_curve(y_true, y_pred_proba, model_name="Model", 
@@ -120,15 +117,27 @@ def generate_auroc_curve(y_true, y_pred_proba, model_name="Model",
     tuple
         (figure, ax) or (figure,) if ax provided
     """
-    # TODO: Implement ROC curve plotting
-    # - Calculate ROC curve using roc_curve()
-    # - Calculate AUROC using auc()
-    # - Plot curve with label showing AUROC score
-    # - Add diagonal reference line
-    # - Set labels: "False Positive Rate", "True Positive Rate"
-    # - Save to output_path if provided
-    # - Return figure and/or axes
-    pass
+    created_ax = ax is None
+    if created_ax:
+        fig, ax = plt.subplots(figsize=(7, 6))
+    else:
+        fig = ax.figure
+
+    fpr, tpr, _ = roc_curve(y_true, y_pred_proba)
+    roc_auc = auc(fpr, tpr)
+
+    ax.plot(fpr, tpr, linewidth=2, label=f"{model_name} (AUROC={roc_auc:.3f})")
+    ax.plot([0, 1], [0, 1], linestyle="--", color="gray", linewidth=1, label="Random")
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.set_title("ROC Curve")
+    ax.legend(loc="lower right")
+    ax.grid(alpha=0.2)
+
+    if output_path is not None:
+        fig.savefig(output_path, bbox_inches="tight")
+
+    return fig if created_ax else (fig, ax)
 
 
 def generate_auprc_curve(y_true, y_pred_proba, model_name="Model",
@@ -154,15 +163,34 @@ def generate_auprc_curve(y_true, y_pred_proba, model_name="Model",
     tuple
         (figure, ax) or (figure,) if ax provided
     """
-    # TODO: Implement PR curve plotting
-    # - Calculate precision-recall curve using precision_recall_curve()
-    # - Calculate AUPRC using average_precision_score()
-    # - Plot curve with label showing AUPRC score
-    # - Add horizontal baseline (prevalence)
-    # - Set labels: "Recall", "Precision"
-    # - Save to output_path if provided
-    # - Return figure and/or axes
-    pass
+    created_ax = ax is None
+    if created_ax:
+        fig, ax = plt.subplots(figsize=(7, 6))
+    else:
+        fig = ax.figure
+
+    precision, recall, _ = precision_recall_curve(y_true, y_pred_proba)
+    auprc = average_precision_score(y_true, y_pred_proba)
+    baseline = np.mean(y_true)
+
+    ax.plot(recall, precision, linewidth=2, label=f"{model_name} (AUPRC={auprc:.3f})")
+    ax.axhline(
+        y=baseline,
+        linestyle="--",
+        color="gray",
+        linewidth=1,
+        label=f"Baseline={baseline:.3f}",
+    )
+    ax.set_xlabel("Recall")
+    ax.set_ylabel("Precision")
+    ax.set_title("Precision-Recall Curve")
+    ax.legend(loc="lower left")
+    ax.grid(alpha=0.2)
+
+    if output_path is not None:
+        fig.savefig(output_path, bbox_inches="tight")
+
+    return fig if created_ax else (fig, ax)
 
 
 def plot_comparison_curves(y_true, y_pred_proba_log, y_pred_proba_knn,
@@ -186,11 +214,39 @@ def plot_comparison_curves(y_true, y_pred_proba_log, y_pred_proba_knn,
     matplotlib.figure.Figure
         Figure with 2 subplots (ROC and PR curves)
     """
-    # TODO: Implement comparison plotting
-    # - Create figure with 1x2 subplots
-    # - Left: ROC curves for both models
-    # - Right: PR curves for both models
-    # - Add legends with AUROC/AUPRC scores
-    # - Save to output_path if provided
-    # - Return figure
-    pass
+    fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+
+    generate_auroc_curve(
+        y_true=y_true,
+        y_pred_proba=y_pred_proba_log,
+        model_name="Logistic Regression",
+        ax=axes[0],
+    )
+    generate_auroc_curve(
+        y_true=y_true,
+        y_pred_proba=y_pred_proba_knn,
+        model_name="k-NN",
+        ax=axes[0],
+    )
+    axes[0].set_title("ROC Comparison")
+
+    generate_auprc_curve(
+        y_true=y_true,
+        y_pred_proba=y_pred_proba_log,
+        model_name="Logistic Regression",
+        ax=axes[1],
+    )
+    generate_auprc_curve(
+        y_true=y_true,
+        y_pred_proba=y_pred_proba_knn,
+        model_name="k-NN",
+        ax=axes[1],
+    )
+    axes[1].set_title("PR Comparison")
+
+    fig.tight_layout()
+
+    if output_path is not None:
+        fig.savefig(output_path, bbox_inches="tight")
+
+    return fig
